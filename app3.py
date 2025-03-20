@@ -130,7 +130,7 @@ def ejecutar_algoritmo_genetico(df_filtrado):
 df = load_data()
 
 # Título de la aplicación
-st.title("Modelos utilizados para la propuesta de apertura de nuevos CAP's o en su caso reubicación: K-Means y Algoritmos Genéticos")
+st.title("2o escenario-Modelos utilizados para la propuesta de apertura de nuevos CAP's o en su caso reubicación: K-Means y Algoritmos Genéticos")
 # Subtítulo corregido
 st.markdown("### Marzo del 2025")
 
