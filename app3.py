@@ -295,7 +295,7 @@ if not df_filtrado.empty:
     # Incrustar el mapa desde la URL proporcionada
     st.write("### Mapa con los PIN de K-Means (azul), Algoritmo Genético (anaranjado) CAP's de PENSIONISSSTE (rojo)")
     #st.write("A continuación se muestra el mapa incrustado desde la URL proporcionada:")
-    mapa_url = "https://todosparaunospe.github.io/mapa_pensionissste/"
+    mapa_url = "https://todosparaunospe.github.io/mapa1_2025/"
     st.components.v1.iframe(mapa_url, height=500)
 
     # Descargar el mapa desde la URL
