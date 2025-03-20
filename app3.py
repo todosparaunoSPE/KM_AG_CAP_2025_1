@@ -57,7 +57,8 @@ def calcular_distancia_km(lat1, lon1, lat2, lon2):
 # Función para cargar los datos
 @st.cache_data
 def load_data():
-    data = pd.read_csv('BASE_UTILIZADA_2025.csv')  # Asegúrate de que el archivo CSV esté en la misma carpeta
+    # Cambia 'BASE_UTILIZADA_2025.csv' por 'BASE_UTILIZADA_2025.xlsx'
+    data = pd.read_excel('BASE_UTILIZADA_2025.xlsx')  # Asegúrate de que el archivo XLSX esté en la misma carpeta
     return data
 
 # Función para ejecutar el algoritmo genético
