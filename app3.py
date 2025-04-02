@@ -315,4 +315,22 @@ if not df_filtrado.empty:
         st.error("No se pudo descargar el mapa desde la URL proporcionada.")
 
 else:
+    # === MARCA DE AGUA (posición corregida) ===
+    st.markdown("""
+    <style>
+    .watermark {
+        position: fixed;
+        bottom: 10%;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        font-size: 36px;
+        color: rgba(160, 243, 10, 0.8);
+        z-index: 1000;
+        pointer-events: none;
+    }
+    </style>
+    <div class="watermark">Creado por: Javier Horacio Pérez Ricárdez</div>
+    """, unsafe_allow_html=True)
+    
     st.warning(f"No hay datos disponibles para el estado de {estado_seleccionado}.")
