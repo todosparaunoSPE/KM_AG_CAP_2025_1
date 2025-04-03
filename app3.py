@@ -249,27 +249,14 @@ if not df_filtrado.empty:
 
     # DataFrame con las ubicaciones sugeridas y los municipios con mayor PEA
     st.write("### Análisis de Distancias")
-    st.write("Comparación de las ubicaciones sugeridas con los municipios seleccionados:")
+    st.write("Comparación de las ubicaciones sugeridas con los municipios de mayor PEA:")
 
-    # Obtener todos los municipios disponibles para el estado seleccionado
-    todos_municipios = df_filtrado['MUNICIPIO'].unique()
-
-    # Widget de selección múltiple para filtrar municipios
-    municipios_seleccionados = st.multiselect(
-        'Selecciona uno o más municipios para filtrar:',
-        options=todos_municipios,
-        default=list(df_filtrado.nlargest(5, 'PEA')['MUNICIPIO'])  # Por defecto muestra los 5 con mayor PEA
-    )
-
-    # Filtrar los municipios seleccionados
-    if municipios_seleccionados:
-        df_filtrado_municipios = df_filtrado[df_filtrado['MUNICIPIO'].isin(municipios_seleccionados)]
-    else:
-        df_filtrado_municipios = df_filtrado.nlargest(5, 'PEA')  # Si no se selecciona ninguno, muestra los 5 con mayor PEA
+    # Obtener los municipios con mayor PEA
+    top_municipios = df_filtrado.nlargest(5, 'PEA')  # Top 5 municipios con mayor PEA
 
     # Crear un DataFrame para el análisis
     analisis_distancias = []
-    for idx, row in df_filtrado_municipios.iterrows():
+    for idx, row in top_municipios.iterrows():
         distancia_kmeans = calcular_distancia_km(row['LATITUD'], row['LONGITUD'], latitude_kmeans, longitude_kmeans)
         distancia_genetico = calcular_distancia_km(row['LATITUD'], row['LONGITUD'], latitude_genetico, longitude_genetico)
         analisis_distancias.append({
@@ -284,30 +271,30 @@ if not df_filtrado.empty:
     # Convertir a DataFrame
     analisis_distancias_df = pd.DataFrame(analisis_distancias)
 
-    # Crear una fila con la suma de las columnas (solo si hay más de un municipio seleccionado)
-    if len(municipios_seleccionados) > 1:
-        suma_pea = analisis_distancias_df['PEA'].sum()
-        suma_distancia_kmeans = analisis_distancias_df['Distancia a K-Means (km)'].sum()
-        suma_distancia_genetico = analisis_distancias_df['Distancia a Algoritmo Genético (km)'].sum()
+    # Crear una fila con la suma de las columnas
+    suma_pea = analisis_distancias_df['PEA'].sum()
+    suma_distancia_kmeans = analisis_distancias_df['Distancia a K-Means (km)'].sum()
+    suma_distancia_genetico = analisis_distancias_df['Distancia a Algoritmo Genético (km)'].sum()
 
-        # Crear un DataFrame con la fila de suma
-        fila_suma = pd.DataFrame({
-            'MUNICIPIO': ['SUMA'],
-            'PEA': [suma_pea],
-            'LATITUD': [''],
-            'LONGITUD': [''],
-            'Distancia a K-Means (km)': [suma_distancia_kmeans],
-            'Distancia a Algoritmo Genético (km)': [suma_distancia_genetico]
-        })
+    # Crear un DataFrame con la fila de suma
+    fila_suma = pd.DataFrame({
+        'MUNICIPIO': ['SUMA'],
+        'PEA': [suma_pea],
+        'LATITUD': [''],
+        'LONGITUD': [''],
+        'Distancia a K-Means (km)': [suma_distancia_kmeans],
+        'Distancia a Algoritmo Genético (km)': [suma_distancia_genetico]
+    })
 
-        # Concatenar la fila de suma al DataFrame original
-        analisis_distancias_df = pd.concat([analisis_distancias_df, fila_suma], ignore_index=True)
+    # Concatenar la fila de suma al DataFrame original
+    analisis_distancias_df = pd.concat([analisis_distancias_df, fila_suma], ignore_index=True)
 
     # Mostrar el DataFrame
     st.dataframe(analisis_distancias_df)
 
     # Incrustar el mapa desde la URL proporcionada
     st.write("### Mapa con los PIN de K-Means (azul), Algoritmo Genético (anaranjado) CAP's de PENSIONISSSTE (rojo)")
+    #st.write("A continuación se muestra el mapa incrustado desde la URL proporcionada:")
     mapa_url = "https://todosparaunospe.github.io/mapa1_2025/"
     st.components.v1.iframe(mapa_url, height=500)
 
@@ -327,5 +314,6 @@ if not df_filtrado.empty:
     else:
         st.error("No se pudo descargar el mapa desde la URL proporcionada.")
 
+    
 else:
     st.warning(f"No hay datos disponibles para el estado de {estado_seleccionado}.")
