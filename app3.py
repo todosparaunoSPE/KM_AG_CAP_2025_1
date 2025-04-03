@@ -311,9 +311,59 @@ if not df_filtrado.empty:
                 file_name="mapa_pensionissste.html",
                 mime="application/html"
             )
+
+        # [Código anterior permanece igual hasta el segundo botón de descarga...]
+
     else:
         st.error("No se pudo descargar el mapa desde la URL proporcionada.")
 
+    # Nueva sección: Recomendación de ubicación óptima
+    st.write("### Recomendación para ubicación del CAP")
     
+    # Análisis comparativo basado en los datos
+    distancia_total_kmeans = analisis_distancias_df.iloc[-1]['Distancia a K-Means (km)']
+    distancia_total_genetico = analisis_distancias_df.iloc[-1]['Distancia a Algoritmo Genético (km)']
+    
+    # Obtener coordenadas de las ubicaciones sugeridas
+    lat_kmeans = ubicaciones_sugeridas_df[ubicaciones_sugeridas_df['MODELO'] == 'K-Means']['LATITUD'].values[0]
+    lon_kmeans = ubicaciones_sugeridas_df[ubicaciones_sugeridas_df['MODELO'] == 'K-Means']['LONGITUD'].values[0]
+    lat_genetico = ubicaciones_sugeridas_df[ubicaciones_sugeridas_df['MODELO'] == 'Algoritmo Genético']['LATITUD'].values[0]
+    lon_genetico = ubicaciones_sugeridas_df[ubicaciones_sugeridas_df['MODELO'] == 'Algoritmo Genético']['LONGITUD'].values[0]
+    
+    # Calcular diferencia de distancias
+    diferencia_distancias = abs(distancia_total_kmeans - distancia_total_genetico)
+    
+    if distancia_total_genetico < distancia_total_kmeans:
+        st.success("**Recomendación:** La ubicación sugerida por el Algoritmo Genético es más óptima para el CAP.")
+        st.write(f"**Justificación:** "
+                f"El Algoritmo Genético muestra una distancia total acumulada {diferencia_distancias:.2f} km menor que K-Means "
+                f"({distancia_total_genetico:.2f} km vs {distancia_total_kmeans:.2f} km) considerando los municipios con mayor PEA. "
+                "Este modelo optimiza directamente la minimización de distancias ponderadas por la PEA.")
+        
+        # Mostrar detalles de la ubicación recomendada
+        st.write("**Detalles de la ubicación recomendada (Algoritmo Genético):**")
+        st.write(f"- Latitud: {lat_genetico:.6f}")
+        st.write(f"- Longitud: {lon_genetico:.6f}")
+        
+    elif distancia_total_kmeans < distancia_total_genetico:
+        st.success("**Recomendación:** La ubicación sugerida por K-Means es más óptima para el CAP.")
+        st.write(f"**Justificación:** "
+                f"K-Means muestra una distancia total acumulada {diferencia_distancias:.2f} km menor que el Algoritmo Genético "
+                f"({distancia_total_kmeans:.2f} km vs {distancia_total_genetico:.2f} km) considerando los municipios con mayor PEA. "
+                "Este modelo proporciona un balance central considerando todas las ubicaciones.")
+        
+        # Mostrar detalles de la ubicación recomendada
+        st.write("**Detalles de la ubicación recomendada (K-Means):**")
+        st.write(f"- Latitud: {lat_kmeans:.6f}")
+        st.write(f"- Longitud: {lon_kmeans:.6f}")
+    else:
+        st.info("**Recomendación:** Ambas ubicaciones son igualmente óptimas según los datos actuales.")
+    
+    # Consideraciones adicionales
+    st.write("**Consideraciones adicionales:**")
+    st.write("- El Algoritmo Genético optimiza específicamente para minimizar la distancia ponderada por PEA")
+    st.write("- K-Means proporciona un centroide geográfico balanceado")
+    st.write("- Para decisiones finales, considerar también factores como accesibilidad vial, infraestructura disponible y crecimiento poblacional futuro")
+
 else:
-    st.warning(f"No hay datos disponibles para el estado de {estado_seleccionado}.")
+    st.warning(f"No hay datos disponibles para el estado de {estado_seleccionado}.") 
