@@ -14,8 +14,6 @@ import random
 from deap import base, creator, tools, algorithms
 from math import radians, sin, cos, sqrt, atan2
 import requests
-import matplotlib.pyplot as plt
-import time
 
 # Estilo de fondo
 page_bg_img = """
@@ -59,7 +57,8 @@ def calcular_distancia_km(lat1, lon1, lat2, lon2):
 # Función para cargar los datos
 @st.cache_data
 def load_data():
-    data = pd.read_excel('BASE_UTILIZADA_2025.xlsx')
+    # Cambia 'BASE_UTILIZADA_2025.csv' por 'BASE_UTILIZADA_2025.xlsx'
+    data = pd.read_excel('BASE_UTILIZADA_2025.xlsx')  # Asegúrate de que el archivo XLSX esté en la misma carpeta
     return data
 
 # Función para ejecutar el algoritmo genético
@@ -68,6 +67,7 @@ def ejecutar_algoritmo_genetico(df_filtrado):
     def evaluar_ubicacion(individual, df_filtrado):
         total_distancia = 0
         for idx, row in df_filtrado.iterrows():
+            # Asegúrate de que individual sea una lista o tupla con dos elementos
             if isinstance(individual, (list, tuple)) and len(individual) == 2:
                 distancia = np.sqrt((row['LATITUD'] - individual[0])**2 + (row['LONGITUD'] - individual[1])**2)
                 total_distancia += distancia * row['PEA']
@@ -77,11 +77,11 @@ def ejecutar_algoritmo_genetico(df_filtrado):
 
     # Configurar el algoritmo genético
     creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
-    creator.create("Individual", list, fitness=creator.FitnessMin)
+    creator.create("Individual", list, fitness=creator.FitnessMin)  # Usar list en lugar de tuple
 
     # Rangos válidos para latitud y longitud en México
-    lat_range = (14.0, 33.0)
-    lon_range = (-118.0, -86.0)
+    lat_range = (14.0, 33.0)  # Ajusta según sea necesario
+    lon_range = (-118.0, -86.0)  # Ajusta según sea necesario
 
     toolbox = base.Toolbox()
     toolbox.register("attr_lat", random.uniform, lat_range[0], lat_range[1])
@@ -92,13 +92,18 @@ def ejecutar_algoritmo_genetico(df_filtrado):
     toolbox.register("evaluate", evaluar_ubicacion, df_filtrado=df_filtrado)
     toolbox.register("mate", tools.cxBlend, alpha=0.5)
 
+    # Función para limitar los valores de latitud y longitud después de la mutación
     def mutar_limitada(individual, indpb):
+        # Convertir el individuo a lista para poder modificarlo
         individual = list(individual)
+        # Aplicar mutación Gaussiana
         if random.random() < indpb:
-            individual[0] += random.gauss(0, 1)
-            individual[1] += random.gauss(0, 1)
+            individual[0] += random.gauss(0, 1)  # Mutar latitud
+            individual[1] += random.gauss(0, 1)  # Mutar longitud
+        # Limitar los valores dentro de los rangos válidos
         individual[0] = np.clip(individual[0], lat_range[0], lat_range[1])
         individual[1] = np.clip(individual[1], lon_range[0], lon_range[1])
+        # Convertir de nuevo a Individual
         return creator.Individual(individual),
 
     toolbox.register("mutate", mutar_limitada, indpb=0.2)
@@ -117,6 +122,7 @@ def ejecutar_algoritmo_genetico(df_filtrado):
             ind.fitness.values = fit
         population = toolbox.select(offspring, k=len(population))
 
+    # Obtener la mejor solución
     best_individual = tools.selBest(population, k=1)[0]
     return best_individual
 
@@ -125,9 +131,10 @@ df = load_data()
 
 # Título de la aplicación
 st.title("2o escenario-Modelos utilizados para la propuesta de apertura de nuevos CAP's o en su caso reubicación: K-Means y Algoritmos Genéticos")
+# Subtítulo corregido
 st.markdown("### marzo del 2025")
 
-# Sidebar con sección de ayuda
+# Sidebar con sección de ayuda y tu nombre
 with st.sidebar:
     st.header("Ayuda")
     st.write("""
@@ -140,6 +147,7 @@ with st.sidebar:
     """)
     st.write("Desarrollado por: **Javier Horacio Pérez Ricárdez**")
 
+    # Botón para descargar el reporte PDF
     with open("K_means_CAP.pdf", "rb") as pdf_file:
         st.download_button(
             label="Descargar reporte (PDF)",
@@ -208,13 +216,14 @@ if not df_filtrado.empty:
             icon=folium.Icon(color=color)
         ).add_to(m)
 
-    # Agregar marcadores para las ubicaciones sugeridas
+    # Agregar el marcador para la ubicación sugerida por K-Means (azul)
     folium.Marker(
         location=[latitude_kmeans, longitude_kmeans],
         popup="Ubicación sugerida por K-Means",
         icon=folium.Icon(color='blue')
     ).add_to(m)
 
+    # Agregar el marcador para la ubicación sugerida por Algoritmos Genéticos (gris)
     folium.Marker(
         location=[latitude_genetico, longitude_genetico],
         popup="Ubicación sugerida por Algoritmos Genéticos",
@@ -224,128 +233,6 @@ if not df_filtrado.empty:
     # Mostrar el mapa en Streamlit
     st.write(f"Mapa de los municipios en {estado_seleccionado} con las ubicaciones sugeridas:")
     st.components.v1.html(m._repr_html_(), height=500)
-
-    # --------------------------------------------------
-    # SECCIÓN DE SIMULACIÓN DE ALGORITMOS
-    # --------------------------------------------------
-    st.write("### Simulación de los algoritmos")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.write("**K-Means - Proceso de convergencia**")
-        kmeans_points = df_filtrado[['LATITUD', 'LONGITUD']].values
-        
-        # Configurar figura
-        fig_kmeans, ax_kmeans = plt.subplots(figsize=(8, 6))
-        plt.close(fig_kmeans)  # Cerramos la figura para evitar doble renderizado
-        
-        if st.button('Iniciar simulación K-Means', key='kmeans_sim'):
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            # Configurar K-Means con inicialización manual y máximo de iteraciones
-            kmeans_sim = KMeans(n_clusters=1, init=np.array([[np.mean(kmeans_points[:, 0]), 
-                                                             np.mean(kmeans_points[:, 1])]]), 
-                               max_iter=1, n_init=1)
-            
-            centroids_history = []
-            
-            for i in range(5):
-                kmeans_sim.fit(kmeans_points)
-                centroids_history.append(kmeans_sim.cluster_centers_[0])
-                
-                # Actualizar gráfico
-                fig_kmeans, ax_kmeans = plt.subplots(figsize=(8, 6))
-                ax_kmeans.scatter(kmeans_points[:, 0], kmeans_points[:, 1], c='blue', alpha=0.5, label='Municipios')
-                ax_kmeans.scatter(centroids_history[-1][0], centroids_history[-1][1], 
-                                c='red', marker='X', s=200, label='Centroide actual')
-                
-                if len(centroids_history) > 1:
-                    ax_kmeans.plot([c[0] for c in centroids_history], [c[1] for c in centroids_history], 
-                                  'r--', alpha=0.3, label='Trayectoria')
-                
-                ax_kmeans.set_xlabel('Latitud')
-                ax_kmeans.set_ylabel('Longitud')
-                ax_kmeans.set_title(f'Iteración {i+1} - K-Means')
-                ax_kmeans.legend()
-                
-                col1.pyplot(fig_kmeans)
-                plt.close(fig_kmeans)
-                
-                progress_bar.progress((i + 1) / 5)
-                status_text.text(f'Iteración {i+1} de 5 completada')
-                time.sleep(0.8)
-            
-            progress_bar.empty()
-            status_text.success('¡Simulación K-Means completada!')
-    
-    with col2:
-        st.write("**Algoritmo Genético - Evolución de soluciones**")
-        genetic_points = df_filtrado[['LATITUD', 'LONGITUD', 'PEA']].values
-        
-        # Configurar figura
-        fig_genetic, ax_genetic = plt.subplots(figsize=(8, 6))
-        plt.close(fig_genetic)
-        
-        if st.button('Iniciar simulación Algoritmo Genético', key='genetic_sim'):
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            # Configuración simplificada del algoritmo genético para simulación
-            toolbox = base.Toolbox()
-            toolbox.register("attr_float", random.uniform, 14.0, 33.0)
-            toolbox.register("individual", tools.initRepeat, creator.Individual, 
-                           toolbox.attr_float, n=2)
-            toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-            
-            pop = toolbox.population(n=30)
-            best_history = []
-            
-            for gen in range(8):
-                # Evaluar fitness
-                fits = [evaluar_ubicacion(ind, df_filtrado) for ind in pop]
-                for fit, ind in zip(fits, pop):
-                    ind.fitness.values = fit
-                
-                # Seleccionar el mejor
-                best = tools.selBest(pop, k=1)[0]
-                best_history.append(best)
-                
-                # Actualizar gráfico
-                fig_genetic, ax_genetic = plt.subplots(figsize=(8, 6))
-                ax_genetic.scatter(genetic_points[:, 0], genetic_points[:, 1], c='blue', alpha=0.5, label='Municipios')
-                
-                # Dibujar población
-                for ind in pop:
-                    ax_genetic.scatter(ind[0], ind[1], c='gray', alpha=0.1, s=30)
-                
-                # Dibujar mejores históricos
-                for i, b in enumerate(best_history[:-1]):
-                    ax_genetic.scatter(b[0], b[1], c='green', alpha=0.5, s=50)
-                
-                # Dibujar mejor actual
-                ax_genetic.scatter(best_history[-1][0], best_history[-1][1], 
-                                  c='red', marker='X', s=200, label='Mejor solución')
-                
-                ax_genetic.set_xlabel('Latitud')
-                ax_genetic.set_ylabel('Longitud')
-                ax_genetic.set_title(f'Generación {gen+1} - Algoritmo Genético')
-                ax_genetic.legend()
-                
-                col2.pyplot(fig_genetic)
-                plt.close(fig_genetic)
-                
-                progress_bar.progress((gen + 1) / 8)
-                status_text.text(f'Generación {gen+1} de 8 completada')
-                time.sleep(0.8)
-                
-                # Operadores genéticos
-                offspring = algorithms.varAnd(pop, toolbox, cxpb=0.5, mutpb=0.2)
-                pop = offspring
-            
-            progress_bar.empty()
-            status_text.success('¡Simulación Algoritmo Genético completada!')
 
     # Guardar el mapa en un archivo HTML
     map_path = f'mapa_{estado_seleccionado}.html'
@@ -360,11 +247,14 @@ if not df_filtrado.empty:
             mime="application/html"
         )
 
-    # Análisis de distancias
+    # DataFrame con las ubicaciones sugeridas y los municipios con mayor PEA
     st.write("### Análisis de Distancias")
     st.write("Comparación de las ubicaciones sugeridas con los municipios de mayor PEA:")
 
-    top_municipios = df_filtrado.nlargest(5, 'PEA')
+    # Obtener los municipios con mayor PEA
+    top_municipios = df_filtrado.nlargest(5, 'PEA')  # Top 5 municipios con mayor PEA
+
+    # Crear un DataFrame para el análisis
     analisis_distancias = []
     for idx, row in top_municipios.iterrows():
         distancia_kmeans = calcular_distancia_km(row['LATITUD'], row['LONGITUD'], latitude_kmeans, longitude_kmeans)
@@ -378,11 +268,15 @@ if not df_filtrado.empty:
             'Distancia a Algoritmo Genético (km)': distancia_genetico
         })
 
+    # Convertir a DataFrame
     analisis_distancias_df = pd.DataFrame(analisis_distancias)
+
+    # Crear una fila con la suma de las columnas
     suma_pea = analisis_distancias_df['PEA'].sum()
     suma_distancia_kmeans = analisis_distancias_df['Distancia a K-Means (km)'].sum()
     suma_distancia_genetico = analisis_distancias_df['Distancia a Algoritmo Genético (km)'].sum()
 
+    # Crear un DataFrame con la fila de suma
     fila_suma = pd.DataFrame({
         'MUNICIPIO': ['SUMA'],
         'PEA': [suma_pea],
@@ -392,15 +286,18 @@ if not df_filtrado.empty:
         'Distancia a Algoritmo Genético (km)': [suma_distancia_genetico]
     })
 
+    # Concatenar la fila de suma al DataFrame original
     analisis_distancias_df = pd.concat([analisis_distancias_df, fila_suma], ignore_index=True)
+
+    # Mostrar el DataFrame
     st.dataframe(analisis_distancias_df)
 
-    # Mapa incrustado
+    # Incrustar el mapa desde la URL proporcionada
     st.write("### Mapa con los PIN de K-Means (azul), Algoritmo Genético (anaranjado) CAP's de PENSIONISSSTE (rojo)")
     mapa_url = "https://todosparaunospe.github.io/mapa1_2025/"
     st.components.v1.iframe(mapa_url, height=500)
 
-    # Descargar mapa PENSIONISSSTE
+    # Descargar el mapa desde la URL
     st.write("### Descargar el Mapa de las ubicaciones de los modelos: K-Means, Algoritmo Genético y CAP's de PENSIONISSSTE")
     response = requests.get(mapa_url)
     if response.status_code == 200:
